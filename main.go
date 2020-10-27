@@ -19,17 +19,22 @@ func main() {
 		instance.Path = name
 		var sessionId uint64 = 0
 		var lastLap uint8 = 0
-		var offsetLap uint8= 0
+		var lastTime float32 = 0
 		network.StartProcessor(utils.F12020, 20777, func(telemetry *models.CarTelemetry) {
-			if telemetry.CurrentLap < lastLap {
-				offsetLap = lastLap + 1
-				fmt.Println("F12020 - New Offset lap")
-			}
-			if offsetLap != 0 {
-				telemetry.CurrentLap = offsetLap
-			}
+			//if( telemetry.CurrentLap < lastLap && telemetry.CurrentLap != 0) || (telemetry.CurrentTime < lastTime && telemetry.CurrentTime != 0 && telemetry.CurrentLap != lastLap + 1) {
+			//	instance.Flush()
+			//	lastLap = 0
+			//	lastTime = 0
+			//	name = "logs/" + strconv.FormatInt(time.Now().Unix(), 10) + ".sd"
+			//	instance = utils.CreateInstance()
+			//	instance.Game = "F12020"
+			//	instance.Path = name
+			//	fmt.Println("F12020 - Reset to new log")
+			//}
+
 			instance.Push(telemetry)
-			lastLap = telemetry.CurrentLap
+			//lastLap = telemetry.CurrentLap
+			//lastTime = telemetry.CurrentTime
 		}, func(name string, entry interface{}) {
 			if name == "CAR_NAME" && instance.CarName == "" {
 				instance.CarName = entry.(string)
@@ -40,8 +45,9 @@ func main() {
 			if name == "GAME_STATE"  {
 				var passed = entry.(uint64)
 				if passed != sessionId && sessionId != 0 {
+					instance.Flush()
 					lastLap = 0
-					offsetLap = 0
+					lastTime = 0
 					name = "logs/" + strconv.FormatInt(time.Now().Unix(), 10) + ".sd"
 					instance = utils.CreateInstance()
 					instance.Game = "F12020"
@@ -64,17 +70,24 @@ func main() {
 		instance.Path = name
 		var lastState uint8 = 0
 		var lastLap uint8 = 0
-		var offsetLap uint8= 0
+		var lastTime float32 = 0
+
 		network.StartProcessor(utils.ProjectCars2, 5606, func(telemetry *models.CarTelemetry) {
-			if telemetry.CurrentLap < lastLap {
-				offsetLap = lastLap + 1
-				fmt.Println("PC2 - New Offset lap")
-			}
-			if offsetLap != 0 {
-				telemetry.CurrentLap = offsetLap
-			}
+			//if( telemetry.CurrentLap < lastLap && telemetry.CurrentLap != 0) || (telemetry.CurrentTime < lastTime && telemetry.CurrentTime == -1 && telemetry.CurrentLap != lastLap + 1) {
+			//	fmt.Println(telemetry.CurrentTime, telemetry.CurrentLap, lastTime, lastLap)
+			//	instance.Flush()
+			//	lastLap = 0
+			//	lastTime = 0
+			//	name = "logs/" + strconv.FormatInt(time.Now().Unix(), 10) + ".sd"
+			//	instance = utils.CreateInstance()
+			//	instance.Game = "PC2"
+			//	instance.Path = name
+			//	fmt.Println("PC2 - Reset to new log")
+			//}
+
 			instance.Push(telemetry)
-			lastLap = telemetry.CurrentLap
+			//lastLap = telemetry.CurrentLap
+			//lastTime = telemetry.CurrentTime
 		}, func(name string, entry interface{}) {
 			if name == "CAR_NAME" && instance.CarName == "" {
 				instance.CarName = entry.(string)
@@ -88,7 +101,7 @@ func main() {
 					name = "logs/" + strconv.FormatInt(time.Now().Unix()+2, 10) + ".sd"
 					instance = utils.CreateInstance()
 					lastLap = 0
-					offsetLap = 0
+					lastTime = 0
 					instance.Game = "PC2"
 					instance.Path = name
 					fmt.Println("PC2 - Reset to new log")
