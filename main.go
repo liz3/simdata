@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"simdata/models"
 	"simdata/network"
 	"simdata/utils"
@@ -11,13 +12,24 @@ import (
 func main() {
 
 	go func() {
+		fmt.Println("F12020 starting collection")
 		var name = "logs/" + strconv.FormatInt(time.Now().Unix(), 10) + ".sd"
 		var instance = utils.CreateInstance()
 		instance.Game = "F12020"
 		instance.Path = name
 		var sessionId uint64 = 0
+		var lastLap uint8 = 0
+		var offsetLap uint8= 0
 		network.StartProcessor(utils.F12020, 20777, func(telemetry *models.CarTelemetry) {
+			if telemetry.CurrentLap < lastLap {
+				offsetLap = lastLap + 1
+				fmt.Println("F12020 - New Offset lap")
+			}
+			if offsetLap != 0 {
+				telemetry.CurrentLap = offsetLap
+			}
 			instance.Push(telemetry)
+			lastLap = telemetry.CurrentLap
 		}, func(name string, entry interface{}) {
 			if name == "CAR_NAME" && instance.CarName == "" {
 				instance.CarName = entry.(string)
@@ -28,10 +40,13 @@ func main() {
 			if name == "GAME_STATE"  {
 				var passed = entry.(uint64)
 				if passed != sessionId && sessionId != 0 {
+					lastLap = 0
+					offsetLap = 0
 					name = "logs/" + strconv.FormatInt(time.Now().Unix(), 10) + ".sd"
 					instance = utils.CreateInstance()
 					instance.Game = "F12020"
 					instance.Path = name
+					fmt.Println("F12020 - Reset to new log")
 				}
 				sessionId = passed
 
@@ -42,13 +57,24 @@ func main() {
 		})
 	}()
 	go func() {
+		fmt.Println("PC2 starting collection")
 		var name = "logs/" + strconv.FormatInt(time.Now().Unix()+2, 10) + ".sd"
 		var instance = utils.CreateInstance()
 		instance.Game = "PC2"
 		instance.Path = name
 		var lastState uint8 = 0
+		var lastLap uint8 = 0
+		var offsetLap uint8= 0
 		network.StartProcessor(utils.ProjectCars2, 5606, func(telemetry *models.CarTelemetry) {
+			if telemetry.CurrentLap < lastLap {
+				offsetLap = lastLap + 1
+				fmt.Println("PC2 - New Offset lap")
+			}
+			if offsetLap != 0 {
+				telemetry.CurrentLap = offsetLap
+			}
 			instance.Push(telemetry)
+			lastLap = telemetry.CurrentLap
 		}, func(name string, entry interface{}) {
 			if name == "CAR_NAME" && instance.CarName == "" {
 				instance.CarName = entry.(string)
@@ -61,8 +87,11 @@ func main() {
 				if lastState == 0 && passed == 30 {
 					name = "logs/" + strconv.FormatInt(time.Now().Unix()+2, 10) + ".sd"
 					instance = utils.CreateInstance()
+					lastLap = 0
+					offsetLap = 0
 					instance.Game = "PC2"
 					instance.Path = name
+					fmt.Println("PC2 - Reset to new log")
 				}
 				lastState = passed
 			}

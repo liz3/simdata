@@ -46,25 +46,25 @@ def draw_line_aggrate(renderer, x,y,height,thinkness, value):
     for targetY in range(y+(height-pixValue), y+height):
         for targetX in range(x-(thinkness //2), x+(thinkness//2)):
             renderer.draw_point([targetX,targetY], sdl2.ext.Color(0,0,255))
-def plot_entry(entry, start, baseOffset, renderer):
-    renderer.draw_point([start, baseOffset + int(entry["steering"] * 50)], sdl2.ext.Color(255,0,0))
-    renderer.draw_point([start, baseOffset + (250) + -int(entry["speed"] * 0.5)], sdl2.ext.Color(0,120,255))
-    renderer.draw_point([start, baseOffset + (400) +  -int(entry["throttle"] * 50)], sdl2.ext.Color(120,0,255))
-    renderer.draw_point([start, baseOffset + (600) +  -int(entry["brake"] * 50)], sdl2.ext.Color(0,0,255))
-    renderer.draw_point([start, baseOffset + (800) +  -( entry["gear"] ) * 10], sdl2.ext.Color(0,255,0))
+def plot_entry(entry, start, baseOffset, renderer,b):
+    renderer.draw_point([start, baseOffset + int(entry["steering"] * 50)],  sdl2.ext.Color(255,255,255) if b else sdl2.ext.Color(255,0,0))
+    renderer.draw_point([start, baseOffset + (250) + -int(entry["speed"] * 0.5)],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(0,120,255))
+    renderer.draw_point([start, baseOffset + (400) +  -int(entry["throttle"] * 50)],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(120,0,255))
+    renderer.draw_point([start, baseOffset + (600) +  -int(entry["brake"] * 50)],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(0,0,255))
+    renderer.draw_point([start, baseOffset + (800) +  -( entry["gear"] ) * 10],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(0,255,0))
 
-def plot_entry_pc2(entry, start, baseOffset, renderer):
-    renderer.draw_point([start, baseOffset + entry["steering"]], sdl2.ext.Color(255,0,0))
-    renderer.draw_point([start, baseOffset + (250) + -int(entry["speed"] * 1.6)], sdl2.ext.Color(0,120,255))
-    renderer.draw_point([start, baseOffset + (400) +  -int(entry["throttle"] * 0.5)], sdl2.ext.Color(120,0,255))
-    renderer.draw_point([start, baseOffset + (600) +  -int(entry["brake"] * 0.5)], sdl2.ext.Color(0,0,255))
-    renderer.draw_point([start, baseOffset + (800) +  -( entry["gear"] - 90) * 10], sdl2.ext.Color(0,255,0))
+def plot_entry_pc2(entry, start, baseOffset, renderer, b):
+    renderer.draw_point([start, baseOffset + entry["steering"]],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(255,0,0))
+    renderer.draw_point([start, baseOffset + (250) + -int(entry["speed"] * 1.6)],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(0,120,255))
+    renderer.draw_point([start, baseOffset + (400) +  -int(entry["throttle"] * 0.5)],  sdl2.ext.Color(255,255,255) if b else sdl2.ext.Color(120,0,255))
+    renderer.draw_point([start, baseOffset + (600) +  -int(entry["brake"] * 0.5)],  sdl2.ext.Color(255,255,255) if b else sdl2.ext.Color(0,0,255))
+    renderer.draw_point([start, baseOffset + (800) +  -( entry["gear"] - 90) * 10],  sdl2.ext.Color(255,255,255) if b else  sdl2.ext.Color(0,255,0))
 
 def compute_display(index, game, zoom):
     if game == "PC2":
-        return index % 11 == 0
+        return index % zoom == 0
     elif game == "F12020":
-        return index % 4 != 0
+        return index % zoom == 0
     return False
 
 def main():
@@ -81,12 +81,40 @@ def main():
     state = "tt"
     lastMouseX = 0
     window.show()
+    offset = 0
+    zoom = 0
+    if game == "PC2":
+        zoom = 45
+    elif game == "F12020":
+        zoom = 2
+    lap1 = 1
+    lap2 = 2
+
     while running:
         events = sdl2.ext.get_events()
         for event in events:
             if event.type == sdl2.SDL_QUIT:
                 running = False
                 break
+            if event.type == sdl2.SDL_KEYDOWN:
+                code = event.key.keysym.scancode
+                print(code)
+                if code == 30:
+                    lap1 += 1
+                if code == 31:
+                    lap1 -= 1
+                if code == 32:
+                    lap2 += 1
+                if code == 33:
+                    lap2 -= 1
+                if code == 82:
+                    zoom -= 2
+                if code == 81:
+                    zoom += 2
+                if code == 80 and offset > 0:
+                    offset -= 100
+                if code == 79:
+                    offset += 100
             if event.type == sdl2.SDL_MOUSEMOTION:
                 motion = event.motion
                 lastMouseX = motion.x
@@ -94,21 +122,26 @@ def main():
         renderer.clear()
         start = 20
         start2 = 20
-
+        lapOffset1 = 0
+        lapOffset2 = 0
         for index, entry in enumerate(parsed):
-            if entry["current_lap"] == int(sys.argv[2]):
-                if compute_display(index, game, 0):
+            if entry["current_lap"] == lap1:
+                if lapOffset1 == 0:
+                    lapOffset1 = index
+                if compute_display(index, game, zoom) and index - lapOffset1 > offset:
                     if game == "F12020":
-                        plot_entry(entry, start, 150, renderer)
+                        plot_entry(entry, start, 150, renderer, False)
                     elif game == "PC2":
-                        plot_entry_pc2(entry, start, 150, renderer)
+                        plot_entry_pc2(entry, start, 150, renderer, False)
                     start += 1
-            if entry["current_lap"] == int(sys.argv[3]):
-                if compute_display(index, game, 0):
+            if entry["current_lap"] == lap2:
+                if lapOffset2 == 0:
+                    lapOffset2 = index
+                if compute_display(index, game, zoom) and index - lapOffset2 > offset:
                     if game == "F12020":
-                        plot_entry(entry, start2, 180, renderer)
+                        plot_entry(entry, start2, 150, renderer, True)
                     elif game == "PC2":
-                        plot_entry_pc2(entry, start2, 180, renderer)
+                        plot_entry_pc2(entry, start2, 150, renderer, True)
                     start2 += 1
 #        texture = factory.from_text(str(state), fontmanager=font_manager2)
         for y in range(1080):

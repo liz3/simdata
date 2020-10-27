@@ -44,22 +44,26 @@ func (instance *Instance) WriteHeader() {
 	}
 }
 
+func (instance *Instance) Flush()  {
+	f, err := os.OpenFile(instance.Path,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err == nil {
+		for _, entry := range instance.entries {
+			bytes, err := json.Marshal(entry)
+			if err == nil {
+				f.Write(bytes)
+				f.Write([]byte(",\n"))
+			}
+		}
+		instance.entries = []*models.CarTelemetry{}
+		f.Close()
+	}
+}
+
 func (instance *Instance) Push(entry *models.CarTelemetry) {
 	instance.entries = append(instance.entries, entry)
 	if len(instance.entries) >= 300 {
 		instance.WriteHeader()
-		f, err := os.OpenFile(instance.Path,
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err == nil {
-			for _, entry := range instance.entries {
-				bytes, err := json.Marshal(entry)
-				if err == nil {
-					f.Write(bytes)
-					f.Write([]byte(",\n"))
-				}
-			}
-			instance.entries = []*models.CarTelemetry{}
-			f.Close()
-		}
+		instance.Flush()
 	}
 }
